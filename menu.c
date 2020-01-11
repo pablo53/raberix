@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "XPLM/XPLMMenus.h"
+
 
 typedef struct {
   const char *title;
