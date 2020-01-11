@@ -5,6 +5,7 @@
 #include <string.h>
 #include <GL/gl.h>
 
+#include "pymodule.h"
 #include "menu.h"
 
 
@@ -16,6 +17,7 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
   strcpy(outSig, "raberix.plugin");
   strcpy(outDesc, "Raberix Plugin for X-Plane.");
 
+  test = test && create_python();
   test = test && create_menu(1, "About", (RbxMenuItemHandler)NULL);
 
   return test;
@@ -37,4 +39,5 @@ PLUGIN_API void XPluginDisable(void)
 PLUGIN_API void XPluginStop(void)
 {
 	destroy_menu();
+  destroy_python();
 }
