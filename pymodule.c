@@ -42,7 +42,11 @@ int create_python(void)
   PyRun_SimpleString("import sys\n"
                      "sys.stderr.write('Raberix: Python interpreter path:\\n')\n"
                      "for path in sys.path:\n"
-                     "    sys.stderr.write('  ' + path + '\\n')\n");
+                     "    sys.stderr.write('  ' + path + '\\n')\n"
+                     "import os\n"
+                     "print('Current dir: ', os.getcwd())\n"
+                     "with open('./raberix.py') as script_file:\n"
+                     "  exec(script_file.read())\n");
 
   return python_initialized;
 }
