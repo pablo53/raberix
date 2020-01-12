@@ -45,7 +45,10 @@ int create_python(void)
                      "    sys.stderr.write('  ' + path + '\\n')\n"
                      "import os\n"
                      "print('Current dir: ', os.getcwd())\n"
-                     "with open('./raberix.py') as script_file:\n"
+                     "script_name = os.getenv('RABERIX_SCRIPT')\n"
+                     "if script_name == None or script_name == '':\n"
+                     "  script_name = './Resources/plugins/raberix.py'\n"
+                     "with open(script_name) as script_file:\n"
                      "  exec(script_file.read())\n");
 
   return python_initialized;
