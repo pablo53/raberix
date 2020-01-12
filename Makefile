@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Werror -DLIN -DXPLM200 -DXPLM210
-PYTHON_VER=3.7
+PYTHON_VER=3
 PYTHON_CFLAGS:=$(shell python$(PYTHON_VER)-config --cflags)
 PYTHON_LDLAGS:=$(shell python$(PYTHON_VER)-config --ldflags) -fno-lto
 
