@@ -41,6 +41,6 @@ PLUGIN_API void XPluginDisable(void)
 PLUGIN_API void XPluginStop(void)
 {
   destroy_loop();
-	destroy_menu();
+  destroy_menu();
   destroy_python();
 }

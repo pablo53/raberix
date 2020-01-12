@@ -125,14 +125,17 @@ static PyObject* python_echo(PyObject *self, PyObject *args)
 static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
 {
   PyObject *handler, *old_handler;
+  PyGILState_STATE gil_state = PyGILState_Ensure(); // it's better to acquire a lock on python interperter to be thread-safe on XPLM callbacks
   if (!PyArg_UnpackTuple(args, "set_flight_loop_handler", 1, 1, &handler))
   {
     fprintf(stderr, "Method 'set_flight_loop_handler' takes exactly 1 argument.");
+    PyGILState_Release(gil_state);
     return PyLong_FromLong((long)0);
   }
   if (!PyCallable_Check(handler))
   {
     fprintf(stderr, "The argument passed to method 'set_flight_loop_handler' is not callable.");
+    PyGILState_Release(gil_state);
     return PyLong_FromLong((long)0);
   }
   Py_INCREF(handler);
@@ -142,6 +145,7 @@ static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
     Py_DECREF(old_handler);
 
   fprintf(stderr, "Registered flight loop handler.");
+  PyGILState_Release(gil_state);
   return PyLong_FromLong((long)1); // no err
 }
 
