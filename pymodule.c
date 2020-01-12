@@ -7,16 +7,24 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "loop.h"
 
+
+/* Variables for function linked to the python interpreter: */
+static PyObject *flight_loop_handler = NULL;
+
+/* other declarations: */
 static PyObject * python_init_raberix(void);
 static int python_initialized = 0;
 
 static char * find_python_home(void);
+static float loop_handler_wrapper(void);
 
 int create_python(void)
 {
   fflush(stdout);
   fprintf(stderr, "Raberix: starting python interpreter... ");
+  set_loop_handler(loop_handler_wrapper);
   char * python_home = find_python_home();
   if (!python_home)
   {
@@ -59,6 +67,9 @@ void destroy_python(void)
   int exit_code = Py_FinalizeEx();
   if (exit_code < 0)
     fprintf(stderr, "Python interpreter for Raberix returned exit code %d.\n", exit_code);
+  if (flight_loop_handler)
+    Py_DECREF(flight_loop_handler);
+  flight_loop_handler = NULL;
 }
 
 static char * find_python_home(void)
@@ -89,11 +100,49 @@ static char * find_python_home(void)
   #undef no_python_home
 }
 
+static float loop_handler_wrapper(void)
+{
+  float ret_val = -1.0f;
+  if (flight_loop_handler)
+  {
+    PyObject *res = PyObject_CallFunctionObjArgs(flight_loop_handler, NULL);
+    if PyFloat_Check(res)
+      ret_val = (float)PyFloat_AsDouble(res);
+    else
+      fprintf(stderr, "Illegal value return from flight loop handler! Assuming -1.0 instead.");
+    Py_DECREF(res);
+  }
+  return ret_val;
+}
+
 /* Functions to be used from inside Python scripts: */
 
 static PyObject* python_echo(PyObject *self, PyObject *args)
 {
   return PyUnicode_FromString("Raberix");
+}
+
+static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
+{
+  PyObject *handler, *old_handler;
+  if (!PyArg_UnpackTuple(args, "set_flight_loop_handler", 1, 1, &handler))
+  {
+    fprintf(stderr, "Method 'set_flight_loop_handler' takes exactly 1 argument.");
+    return PyLong_FromLong((long)0);
+  }
+  if (!PyCallable_Check(handler))
+  {
+    fprintf(stderr, "The argument passed to method 'set_flight_loop_handler' is not callable.");
+    return PyLong_FromLong((long)0);
+  }
+  Py_INCREF(handler);
+  old_handler = flight_loop_handler;
+  flight_loop_handler = handler;
+  if (old_handler)
+    Py_DECREF(old_handler);
+
+  fprintf(stderr, "Registered flight loop handler.");
+  return PyLong_FromLong((long)1); // no err
 }
 
 /* Registering functions as a module in Python interpreter: */
@@ -104,7 +153,13 @@ static PyMethodDef python_methods[] =
     .ml_name = "echo",
     .ml_meth = python_echo,
     .ml_flags = METH_VARARGS,
-    .ml_doc = "Returns echo."
+    .ml_doc = "Return echo."
+  },
+  {
+    .ml_name = "set_flight_loop_handler",
+    .ml_meth = python_set_flight_loop_handler,
+    .ml_flags = METH_VARARGS,
+    .ml_doc = "Register the flight loop callback handler."
   },
   {
     .ml_name = NULL,

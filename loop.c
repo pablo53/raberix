@@ -51,6 +51,6 @@ static float flight_loop_callback(float inElapsedSinceLastCall,
                                   void *inRefcon)
 {
   if (flight_loop_handler)
-    flight_loop_handler();
+    return flight_loop_handler();
   return -1.0; // by default, call back every flight loop iteration
 }

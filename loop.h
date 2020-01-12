@@ -1,7 +1,7 @@
 #ifndef _LOOP_H
 #define _LOOP_H
 
-typedef void (*RbxLoopHandler)(void);
+typedef float (*RbxLoopHandler)(void);
 
 int create_loop(void);
 void destroy_loop(void);
