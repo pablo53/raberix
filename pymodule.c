@@ -313,7 +313,7 @@ static PyMethodDef python_methods[] =
     .ml_name = "get_dataref",
     .ml_meth = python_get_dataref,
     .ml_flags = METH_VARARGS,
-    .ml_doc = "Get XPLM data ref value by data ref handler ID (see: find_dataref() method). None, if not found, or error occured."
+    .ml_doc = "Get XPLM data ref value by data ref handler ID (see: find_dataref() method). None, if not found or error occured."
   },
   {
     .ml_name = NULL,

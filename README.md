@@ -15,7 +15,7 @@ The Makefile is configured to produce artifact for Linux - ```raberix.xpl```.
 The LGPL 3.0 applies. See: ```LICENSE``` file.
 
 ## How does it work?
-After a successful build, the outcome file ```raberix.xpl``` should be copied to ```$XPLANE_HOME/Resources/plugins```, where ```$XPLANE_HOME``` is Your X-Plane installation directory. There, You can also put Your own```raberix.py``` file with Your custom plugin code written in Python. An example ```raberix.py``` content is as follows:
+After a successful build, the outcome file ```raberix.xpl``` should be copied to ```$XPLANE_HOME/Resources/plugins```, where ```$XPLANE_HOME``` is Your X-Plane installation directory. There, You can also put Your own ```raberix.py``` file with Your custom plugin code written in Python. An example ```raberix.py``` content is as follows:
 
 ```
 import raberix
@@ -25,9 +25,9 @@ print("Raberix python script loaded. Echo received: ", raberix.echo())
 nav1_freq_hz = raberix.find_dataref('sim/cockpit/radios/nav1_freq_hz')
 if nav1_freq_hz < 0:
     print("NAV1 Freq data not found!")
-    sys.stdout.flush()
 else:
     print("NAV1 Freq data found!")
+sys.stdout.flush()
 
 def fhandler():
     freq = raberix.get_dataref(nav1_freq_hz)
@@ -39,7 +39,7 @@ raberix.set_flight_loop_handler(fhandler)
 
 print("Raberix python script finished.")
 ```
-The above script defines a plugin code where, in each flight simulation iteration (every 0.1 s., by default), the _XPLMDataRef_  named ```'sim/cockpit/radios/nav1_freq_hz'``` is read and printed to the console. This refers to the current (i.e. not standby) frequency of the first VOR receiver (NAV 1).
+The above script defines a plugin code where, in each flight simulation iteration (every 0.1 s., by default), the _XPLMDataRef_  named ```'sim/cockpit/radios/nav1_freq_hz'``` is read and printed to the console. This refers to the current (i.e. not standby) frequency of the first VOR receiver (NAV 1). See: https://developer.x-plane.com/datarefs/ for dataref list.
 
 If You plugin Python script is not ```$XPLANE_HOME/Resources/plugins/raberix.py```, You can start X-Plane with environment variable ```$RABERIX_SCRIPT``` set to Your file path.
 
