@@ -20,14 +20,7 @@ After a successful build, the outcome file ```raberix.xpl``` should be copied to
 ```
 import raberix
 
-print("Raberix python script loaded. Echo received: ", raberix.echo())
-
 nav1_freq_hz = raberix.find_dataref('sim/cockpit/radios/nav1_freq_hz')
-if nav1_freq_hz < 0:
-    print("NAV1 Freq data not found!")
-else:
-    print("NAV1 Freq data found!")
-sys.stdout.flush()
 
 def fhandler():
     freq = raberix.get_dataref(nav1_freq_hz)
@@ -36,8 +29,6 @@ def fhandler():
     return -1.0;
 
 raberix.set_flight_loop_handler(fhandler)
-
-print("Raberix python script finished.")
 ```
 The above script defines a plugin code where, in each flight simulation iteration (every 0.1 s., by default), the _XPLMDataRef_  named ```'sim/cockpit/radios/nav1_freq_hz'``` is read and printed to the console. This refers to the current (i.e. not standby) frequency of the first VOR receiver (NAV 1). See: https://developer.x-plane.com/datarefs/ for dataref list.
 
