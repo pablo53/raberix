@@ -398,7 +398,7 @@ static PyObject* python_create_command(PyObject *self, PyObject *args)
   PyObject *cmd_ref_desc = NULL; 
   PyGILState_STATE gil_state = PyGILState_Ensure();
 
-  if (!PyArg_UnpackTuple(args, "create_command", 1, 1, &cmd_ref_name, &cmd_ref_desc))
+  if (!PyArg_UnpackTuple(args, "create_command", 2, 2, &cmd_ref_name, &cmd_ref_desc))
   {
     fprintf(stderr, "Method 'create_command' takes exactly 2 arguments: <command name>, <command description>.\n");
     Py_INCREF(Py_None);
