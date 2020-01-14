@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -121,39 +122,82 @@ static float loop_handler_wrapper(void)
 
 /* Auxiliary functions for Python: */
 
-static char* pyobj2str(PyObject *obj)
+static char* pyobj2str(PyObject *obj, int *err)
 {
   /* Warning: This function does not acquire GIL!                               */
   /* It return a string that needs to be deallocated with free() by the caller. */
 
   char *s = NULL;
+
+  Py_INCREF(obj);
   if (!PyUnicode_Check(obj))
   {
+    Py_DECREF(obj);
     fprintf(stderr, "The argument passed is not a string.\n");
+    if (err)
+      *err = -1;
     return s;
   }
   PyObject *u_obj = PyUnicode_AsUTF8String(obj);
   if (!PyBytes_Check(u_obj))
   {
-    fprintf(stderr, "Internal error on decoding string.\n");
+    Py_DECREF(obj);
     Py_DECREF(u_obj);
+    fprintf(stderr, "Internal error on decoding string.\n");
+    if (err)
+      *err = -1;
     return s;
   }
   const char *s_obj = PyBytes_AsString(u_obj);
   s = strdup(s_obj);
+  Py_DECREF(obj);
   Py_DECREF(u_obj);
+  if (err)
+    *err = 0;
 
   return s;
 }
 
-static long pyobj2long(PyObject *obj, long default_value)
+static long pyobj2long(PyObject *obj, long default_value, int *err)
 {
   long ret_val = default_value;
-
+  
+  Py_INCREF(obj);
   if (!PyLong_Check(obj))
+  {
     fprintf(stderr, "The argument passed is not an integer. Assuming %ld.\n", default_value);
+    if (err)
+      *err = -1;
+  }
   else
+  {
     ret_val = PyLong_AsLong(obj);
+    if (err)
+      *err = 0;
+  }
+  Py_DECREF(obj);
+  
+  return ret_val;
+}
+
+static double pyobj2double(PyObject *obj, double default_value, int *err)
+{
+  long ret_val = default_value;
+  
+  Py_INCREF(obj);
+  if (!PyFloat_Check(obj))
+  {
+    fprintf(stderr, "The argument passed is not a float. Assuming %f.\n", default_value);
+    if (err)
+      *err = -1;
+  }
+  else
+  {
+    ret_val = PyFloat_AsDouble(obj);
+    if (err)
+      *err = 0;
+  }
+  Py_DECREF(obj);
   
   return ret_val;
 }
@@ -177,14 +221,15 @@ static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
     PyGILState_Release(gil_state);
     return ret_val;
   }
+  Py_INCREF(handler);
   if (!PyCallable_Check(handler))
   {
     fprintf(stderr, "The argument passed to method 'set_flight_loop_handler' is not callable.");
     ret_val = PyLong_FromLong((long)0);
+    Py_DECREF(handler);
     PyGILState_Release(gil_state);
     return ret_val;
   }
-  Py_INCREF(handler);
   old_handler = flight_loop_handler;
   flight_loop_handler = handler;
   if (old_handler)
@@ -209,7 +254,7 @@ static PyObject* python_find_dataref(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(data_ref_name);
-  char * s_data_ref_name = pyobj2str(data_ref_name);
+  char * s_data_ref_name = pyobj2str(data_ref_name, NULL);
   Py_DECREF(data_ref_name);
   if (!s_data_ref_name)
   {
@@ -242,9 +287,10 @@ static PyObject* python_get_dataref(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(data_ref_idx);
-  int i_data_ref_idx = (int)pyobj2long(data_ref_idx, -1l);
+  int err;
+  int i_data_ref_idx = (int)pyobj2long(data_ref_idx, -1l, &err);
   Py_DECREF(data_ref_idx);
-  if (i_data_ref_idx == -1)
+  if (err)
   {
     fprintf(stderr, "The argument passed to method 'get_dataref' cannot be read as long integer.\n");
     Py_INCREF(Py_None);
@@ -298,6 +344,98 @@ static PyObject* python_get_dataref(PyObject *self, PyObject *args)
   return ret_val;
 }
 
+static PyObject* python_set_dataref(PyObject *self, PyObject *args)
+{
+  PyGILState_STATE gil_state = PyGILState_Ensure();
+  PyObject *data_ref_idx = NULL;
+  PyObject *value = NULL;
+
+  if (!PyArg_UnpackTuple(args, "set_dataref", 2, 2, &data_ref_idx, &value))
+  {
+    fprintf(stderr, "Method 'set_dataref' takes exactly 2 arguments: <data ref index>, <value>.\n");
+    Py_INCREF(Py_None);
+    PyGILState_Release(gil_state);
+    return Py_None;
+  }
+
+#define INCREF_ALL() Py_INCREF(data_ref_idx); Py_INCREF(value)
+#define DECREF_ALL() Py_DECREF(data_ref_idx); Py_DECREF(value)
+
+  INCREF_ALL();
+
+  int err;
+  int i_data_ref_idx = (int)pyobj2long(data_ref_idx, -1l, &err);
+  if (err)
+  {
+    fprintf(stderr, "The 1st argument passed to method 'set_dataref' cannot be read as long integer.\n");
+    DECREF_ALL();
+    Py_INCREF(Py_None);
+    PyGILState_Release(gil_state);
+    return Py_None;
+  }
+  
+  XPLMDataRef data_ref = get_data_ref(i_data_ref_idx);
+  if (!data_ref)
+  {
+    fprintf(stderr, "Data Ref no. %i not found.\n", i_data_ref_idx);
+    DECREF_ALL();
+    Py_INCREF(Py_None);
+    PyGILState_Release(gil_state);
+    return Py_None;
+  }
+
+  int i_value;
+  double d_value;
+  switch (XPLMGetDataRefTypes(data_ref))
+  {
+    case xplmType_Unknown:
+      fprintf(stderr, "Unknown data type of data ref. %i.\n", i_data_ref_idx);
+      break;
+    case xplmType_Int:
+      i_value = (int)pyobj2long(value, 0, &err);
+      if (err)
+        fprintf(stderr, "The 2nd argument of 'set_dataref' method should be integer for data ref. %i.\n", i_data_ref_idx);
+      else
+        XPLMSetDatai(data_ref, i_value);
+      break;
+    case xplmType_Float:
+      d_value = pyobj2double(value, NAN, &err);
+      if (err)
+        fprintf(stderr, "The 2nd argument of 'set_dataref' method should be Float for data ref. %i.\n", i_data_ref_idx);
+      else
+        XPLMSetDataf(data_ref, (float)d_value);
+      break;
+    case xplmType_Double:
+      d_value = (double)pyobj2double(value, NAN, &err);
+      if (err)
+        fprintf(stderr, "The 2nd argument of 'set_dataref' method should be Float for data ref. %i.\n", i_data_ref_idx);
+      else
+        XPLMSetDatad(data_ref, d_value);
+      break;
+    case xplmType_FloatArray:
+      fprintf(stderr, "Float array type - not implemented (data ref. %i).\n", i_data_ref_idx);
+      break;
+    case xplmType_IntArray:
+      fprintf(stderr, "Integer array type - not implemented (data ref. %i).\n", i_data_ref_idx);
+      break;
+    case xplmType_Data:
+      fprintf(stderr, "Data type - not implemented (data ref. %i).\n", i_data_ref_idx);
+      break;
+    default:
+      fprintf(stderr, "Unrecognized data type of data ref. %i.\n", i_data_ref_idx);
+      break;
+  }
+
+  DECREF_ALL();
+  Py_INCREF(Py_None);
+  PyGILState_Release(gil_state);
+  return Py_None;
+
+#undef INCREF_ALL
+#undef DECREF_ALL
+
+}
+
 static PyObject* python_find_commandref(PyObject *self, PyObject *args)
 {
   PyObject *cmd_ref_name = NULL; 
@@ -311,7 +449,7 @@ static PyObject* python_find_commandref(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(cmd_ref_name);
-  char * s_cmd_ref_name = pyobj2str(cmd_ref_name);
+  char * s_cmd_ref_name = pyobj2str(cmd_ref_name, NULL);
   Py_DECREF(cmd_ref_name);
   if (!s_cmd_ref_name)
   {
@@ -346,9 +484,10 @@ static PyObject* python_do_command(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(cmd_ref_idx);
-  int i_cmd_ref_idx = (int)pyobj2long(cmd_ref_idx, -1l);
+  int err;
+  int i_cmd_ref_idx = (int)pyobj2long(cmd_ref_idx, -1l, &err);
   Py_DECREF(cmd_ref_idx);
-  if (i_cmd_ref_idx == -1)
+  if (err)
   {
     fprintf(stderr, "The 1st argument passed to method 'do_command' cannot be read as long integer.\n");
     PyGILState_Release(gil_state);
@@ -358,10 +497,10 @@ static PyObject* python_do_command(PyObject *self, PyObject *args)
   if (cmd_type)
   {
     Py_INCREF(cmd_type);
-    i_cmd_type = (int)pyobj2long(cmd_type, -1l);
+    i_cmd_type = (int)pyobj2long(cmd_type, -1l, &err);
     Py_DECREF(cmd_type);
   }
-  if (i_cmd_type < 0 || i_cmd_type > 2)
+  if (i_cmd_type < 0 || i_cmd_type > 2 || err)
   {
     fprintf(stderr, "The 2nd argument passed to method 'do_command' must be one of: 0 (=\"do command once\"), 1 (\"start command\") or 2 (\"end command\").\n");
     PyGILState_Release(gil_state);
@@ -406,7 +545,7 @@ static PyObject* python_create_command(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(cmd_ref_name);
-  char * s_cmd_ref_name = pyobj2str(cmd_ref_name);
+  char * s_cmd_ref_name = pyobj2str(cmd_ref_name, NULL);
   Py_DECREF(cmd_ref_name);
   if (!s_cmd_ref_name)
   {
@@ -416,7 +555,7 @@ static PyObject* python_create_command(PyObject *self, PyObject *args)
     return Py_None;
   }
   Py_INCREF(cmd_ref_desc);
-  char * s_cmd_ref_desc = pyobj2str(cmd_ref_desc);
+  char * s_cmd_ref_desc = pyobj2str(cmd_ref_desc, NULL);
   Py_DECREF(cmd_ref_desc);
   if (!s_cmd_ref_desc)
   {
@@ -485,7 +624,7 @@ static PyObject* python_add_command_handler(PyObject *self, PyObject *args)
   
   if (!PyArg_UnpackTuple(args, "add_command_handler", 3, 3, &cmd_ref_index, &handler, &is_before))
   {
-    fprintf(stderr, "Method 'add_command_handler' takes exactly 2 arguments: <command ref id>, <handler>, <is before>.");
+    fprintf(stderr, "Method 'add_command_handler' takes exactly 3 arguments: <command ref id>, <handler>, <is before>.");
     ret_val = PyLong_FromLong((long)-1l);
     PyGILState_Release(gil_state);
     return ret_val;
@@ -607,6 +746,12 @@ static PyMethodDef python_methods[] =
     .ml_meth = python_get_dataref,
     .ml_flags = METH_VARARGS,
     .ml_doc = "Get XPLM data ref value by data ref handler ID (see: find_dataref() method). None, if not found or error occured."
+  },
+  {
+    .ml_name = "set_dataref",
+    .ml_meth = python_set_dataref,
+    .ml_flags = METH_VARARGS,
+    .ml_doc = "Set XPLM data ref value by data ref handler ID (see: find_dataref() method)."
   },
   {
     .ml_name = "find_commandref",
