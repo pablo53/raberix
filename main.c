@@ -9,6 +9,7 @@
 #include "pymodule.h"
 #include "menu.h"
 #include "dataref.h"
+#include "commandref.h"
 #include "loop.h"
 
 
@@ -20,9 +21,10 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
   strcpy(outSig, "raberix.plugin");
   strcpy(outDesc, "Raberix Plugin for X-Plane.");
 
-  test = test && create_python();
-  test = test && create_menu(1, "About", (RbxMenuItemHandler)NULL);
   test = test && create_dataref();
+  test = test && create_commandref();
+  test = test && create_menu(1, "About", (RbxMenuItemHandler)NULL);
+  test = test && create_python();
   test = test && create_loop();
 
   return test;
@@ -44,7 +46,8 @@ PLUGIN_API void XPluginDisable(void)
 PLUGIN_API void XPluginStop(void)
 {
   destroy_loop();
-  destroy_dataref();
-  destroy_menu();
   destroy_python();
+  destroy_menu();
+  destroy_commandref();
+  destroy_dataref();
 }
