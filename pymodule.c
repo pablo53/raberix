@@ -110,12 +110,20 @@ static float loop_handler_wrapper(void)
   float ret_val = -1.0f;
   if (flight_loop_handler)
   {
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    PyErr_Clear();
     PyObject *res = PyObject_CallFunctionObjArgs(flight_loop_handler, NULL);
-    if PyFloat_Check(res)
-      ret_val = (float)PyFloat_AsDouble(res);
+    if (PyErr_Occurred())
+      fprintf(stderr, "Exception in the flight loop handler!\n");
     else
-      fprintf(stderr, "Illegal value return from flight loop handler! Assuming -1.0 instead.\n");
-    Py_DECREF(res);
+    {
+      if PyFloat_Check(res)
+        ret_val = (float)PyFloat_AsDouble(res);
+      else
+        fprintf(stderr, "Illegal value return from flight loop handler! Assuming -1.0 instead.\n");
+      Py_DECREF(res);
+    }
+    PyGILState_Release(gil_state);
   }
   return ret_val;
 }
@@ -586,6 +594,7 @@ static int command_handler_wrapper(int cmd_ref_index, int cmd_hdl_id, int is_bef
   PyObject *py_is_before = PyBool_FromLong((long)is_before);
   PyObject *py_phase = PyLong_FromLong((long)phase);
   
+  PyErr_Clear();
   // python_add_command_handler() has already checked that ((PyObject*)handler_data) is callable:
   PyObject *res = PyObject_CallFunctionObjArgs((PyObject*)handler_data, py_cmd_ref_index, py_cmd_hdl_id, py_is_before, py_phase, NULL);
 
@@ -595,12 +604,17 @@ static int command_handler_wrapper(int cmd_ref_index, int cmd_hdl_id, int is_bef
   Py_DECREF(py_phase);
 
   int ret_val = 1;
-  if (PyLong_Check(res))
-    ret_val = (int)PyLong_AsLong(res);
+  if (PyErr_Occurred())
+    fprintf(stderr, "Exception in command handler id %d, called from command ref. %d!\n", cmd_hdl_id, cmd_ref_index);
   else
-    fprintf(stderr, "No integer value returned from command handler id %d, called from command ref. %d.\n", cmd_hdl_id, cmd_ref_index);
-  Py_DECREF(res);
-
+  {
+    if (PyLong_Check(res))
+      ret_val = (int)PyLong_AsLong(res);
+    else
+      fprintf(stderr, "No integer value returned from command handler id %d, called from command ref. %d.\n", cmd_hdl_id, cmd_ref_index);
+    Py_DECREF(res);
+  }
+  
   PyGILState_Release(gil_state);
   return ret_val;
 }
