@@ -114,7 +114,7 @@ static float loop_handler_wrapper(void)
     if PyFloat_Check(res)
       ret_val = (float)PyFloat_AsDouble(res);
     else
-      fprintf(stderr, "Illegal value return from flight loop handler! Assuming -1.0 instead.");
+      fprintf(stderr, "Illegal value return from flight loop handler! Assuming -1.0 instead.\n");
     Py_DECREF(res);
   }
   return ret_val;
@@ -216,7 +216,7 @@ static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
   PyGILState_STATE gil_state = PyGILState_Ensure(); // it's better to acquire a lock on python interperter to be thread-safe on XPLM callbacks
   if (!PyArg_UnpackTuple(args, "set_flight_loop_handler", 1, 1, &handler))
   {
-    fprintf(stderr, "Method 'set_flight_loop_handler' takes exactly 1 argument.");
+    fprintf(stderr, "Method 'set_flight_loop_handler' takes exactly 1 argument.\n");
     ret_val = PyLong_FromLong((long)0);
     PyGILState_Release(gil_state);
     return ret_val;
@@ -224,7 +224,7 @@ static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
   Py_INCREF(handler);
   if (!PyCallable_Check(handler))
   {
-    fprintf(stderr, "The argument passed to method 'set_flight_loop_handler' is not callable.");
+    fprintf(stderr, "The argument passed to method 'set_flight_loop_handler' is not callable.\n");
     ret_val = PyLong_FromLong((long)0);
     Py_DECREF(handler);
     PyGILState_Release(gil_state);
@@ -235,7 +235,7 @@ static PyObject* python_set_flight_loop_handler(PyObject *self, PyObject *args)
   if (old_handler)
     Py_DECREF(old_handler);
 
-  fprintf(stderr, "Registered flight loop handler.");
+  fprintf(stderr, "Registered flight loop handler.\n");
   ret_val = PyLong_FromLong((long)1);
   PyGILState_Release(gil_state);
   return ret_val; // no err
@@ -598,7 +598,7 @@ static int command_handler_wrapper(int cmd_ref_index, int cmd_hdl_id, int is_bef
   if (PyLong_Check(res))
     ret_val = (int)PyLong_AsLong(res);
   else
-    fprintf(stderr, "No integer value returned from command handler id %d, called from command ref. %d.", cmd_hdl_id, cmd_ref_index);
+    fprintf(stderr, "No integer value returned from command handler id %d, called from command ref. %d.\n", cmd_hdl_id, cmd_ref_index);
   Py_DECREF(res);
 
   PyGILState_Release(gil_state);
@@ -624,7 +624,7 @@ static PyObject* python_add_command_handler(PyObject *self, PyObject *args)
   
   if (!PyArg_UnpackTuple(args, "add_command_handler", 3, 3, &cmd_ref_index, &handler, &is_before))
   {
-    fprintf(stderr, "Method 'add_command_handler' takes exactly 3 arguments: <command ref id>, <handler>, <is before>.");
+    fprintf(stderr, "Method 'add_command_handler' takes exactly 3 arguments: <command ref id>, <handler>, <is before>.\n");
     ret_val = PyLong_FromLong((long)-1l);
     PyGILState_Release(gil_state);
     return ret_val;
@@ -679,7 +679,7 @@ static PyObject* python_add_command_handler(PyObject *self, PyObject *args)
     fprintf(stderr, "Failed to register command handler!\n");
   }
   else
-    fprintf(stderr, "Registered command handler.");
+    fprintf(stderr, "Registered command handler.\n");
 
   ret_val = PyLong_FromLong((long)cmd_hdl_id);
   PyGILState_Release(gil_state);
@@ -693,7 +693,7 @@ static PyObject* python_remove_command_handler(PyObject *self, PyObject *args)
   
   if (!PyArg_UnpackTuple(args, "remove_command_handler", 1, 1, &cmd_hdl_id))
   {
-    fprintf(stderr, "Method 'remove_command_handler' takes exactly 1 argument: <command handler id>.");
+    fprintf(stderr, "Method 'remove_command_handler' takes exactly 1 argument: <command handler id>.\n");
     Py_INCREF(Py_None);
     PyGILState_Release(gil_state);
     return Py_None;
