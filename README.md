@@ -39,3 +39,36 @@ Then, Your script may use any library that You have installed in Your environmen
 In order to correctly recognize Your preferred Python home, the following environment variables are scanned (in that order, first non-empty one applies): ```$RABERIX_PYTHON_HOME```, ```$CONDA_HOME```, ```$PYTHON_HOME```, ```$PYTHONHOME```.
 If no home is found in the above way, the plugin will not start its Python embedded interpreter, thus Your Python script will not work.
 Be careful about the Python environment - it must contain at least ```encodings``` modules, otherwise Your whole X-Plane will fail to start!
+
+## Python scripts
+Another example of a simple script is:
+```
+import raberix
+
+nav1_freq_hz = raberix.find_dataref('sim/cockpit/radios/nav1_freq_hz')
+throttle_up = raberix.find_commandref('sim/engines/throttle_up')
+my_command = raberix.create_command('sim/engines/my_command', 'My command...')
+toggle = 1
+
+def mycmdhandler(command_id, handler_id, is_before, phase):
+    global toggle
+    if phase != 0:
+        return 1
+    freq = raberix.get_dataref(nav1_freq_hz)
+    print("[{}] NAV 1 frquency: {} kHz".format(phase, freq / 100))
+    sys.stdout.flush()
+    if freq > 10800:
+        raberix.set_dataref(nav1_freq_hz, freq - 10)
+    raberix.do_command(throttle_up, toggle)
+    toggle = 3 - toggle
+    return 1
+
+raberix.add_command_handler(my_command, mycmdhandler, True)
+
+def fhandler():
+    return -1.0;
+
+raberix.set_flight_loop_handler(fhandler)
+```
+
+This scripts creates new command 'sim/engines/my_command', which You can map to Your equipment in X-Plane (via "Settings" -> "Joystick & Equipment" -> {"Buttons: Adv", "Keys"}). This command, on pressing (but not holding or releasing it) a button mapped to it, shows the current active fequency of NAV 1, decreases it by 100kHz, and either starts throttling up or stops it. Of course, this simple "business logic" has no real meaning in aviation, but shows a sample of what can be achieved. 
