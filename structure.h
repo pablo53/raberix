@@ -1,6 +1,10 @@
 #ifndef _STRUCTURE_H
 #define _STRUCTURE_H
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 #include <pthread.h>
 
 /* Synchronized dynamically allocated list: */
