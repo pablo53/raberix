@@ -12,6 +12,7 @@
 #include "loop.h"
 #include "dataref.h"
 #include "commandref.h"
+#include "menu.h"
 
 
 /* Variables for function linked to the python interpreter: */
@@ -20,6 +21,7 @@ static PyObject *flight_loop_handler = NULL;
 /* other declarations: */
 static PyObject * python_init_raberix(void);
 static int python_initialized = 0;
+static PyThreadState *th = NULL;
 
 static char * find_python_home(void);
 static float loop_handler_wrapper(void);
@@ -50,6 +52,7 @@ int create_python(void)
   fprintf(stderr, "program name set, ");
   python_initialized = !PyImport_AppendInittab("raberix", &python_init_raberix);
   Py_Initialize();
+  PyEval_InitThreads();
   PyMem_RawFree(loc_python_home);
   fprintf(stderr, " done\n");
   PyRun_SimpleString("import sys\n"
@@ -63,18 +66,23 @@ int create_python(void)
                      "  script_name = './Resources/plugins/raberix.py'\n"
                      "with open(script_name) as script_file:\n"
                      "  exec(script_file.read())\n");
+  th = PyEval_SaveThread();
 
   return python_initialized;
 }
 
 void destroy_python(void)
 {
+  fprintf(stderr, "Raberix: stopping python interpreter... ");
+  if (th)
+    PyEval_RestoreThread(th);
   int exit_code = Py_FinalizeEx();
   if (exit_code < 0)
-    fprintf(stderr, "Python interpreter for Raberix returned exit code %d.\n", exit_code);
+    fprintf(stderr, "(Python interpreter for Raberix returned exit code %d on finalizing.) \n", exit_code);
   if (flight_loop_handler)
     Py_DECREF(flight_loop_handler);
   flight_loop_handler = NULL;
+  fprintf(stderr, " done\n");
 }
 
 static char * find_python_home(void)
@@ -733,6 +741,55 @@ static PyObject* python_remove_command_handler(PyObject *self, PyObject *args)
   return Py_None;
 }
 
+static void menu_item_handler_wrapper(int menuItemId, void *data)
+{
+  if (!data)
+    return; // Where is the handler?!
+
+  PyGILState_STATE gil_state = PyGILState_Ensure();
+  PyObject *res = PyObject_CallFunction((PyObject*)data, "i", menuItemId); // function 'python_add_menu_item' has already checked that this is callable
+  Py_XDECREF(res); // simply ignore any return value
+
+  PyGILState_Release(gil_state);
+}
+
+static void menu_item_handler_ddest(void *data)
+{
+  if (!data)
+    return;
+  PyGILState_STATE gil_state = PyGILState_Ensure(); // FIXME: Acquiring GIL here causes segmentation fault!
+  Py_DECREF((PyObject*)data);
+  PyGILState_Release(gil_state);
+}
+
+static PyObject* python_add_menu_item(PyObject *self, PyObject *args)
+{
+  PyGILState_STATE gil_state = PyGILState_Ensure();
+  const char *menu_item_title = NULL;
+  PyObject *p_handler = NULL;
+  PyObject *ret_val = NULL;
+  
+  if (!PyArg_ParseTuple(args, "sO:add_menu_item", &menu_item_title, &p_handler))
+  {
+    fprintf(stderr, "Function 'add_menu_item' takes 2 arguments: <menu item name>, <menu item handler>.\n");
+    return NULL;
+  }
+  Py_INCREF(p_handler);
+  if (!PyCallable_Check(p_handler))
+  {
+    Py_DECREF(p_handler);
+    fprintf(stderr, "The second argument of 'add_menu_item' must be callable.\n");
+    ret_val = PyLong_FromLong((long)-1);
+    PyGILState_Release(gil_state);
+    return ret_val;
+  }
+  int item_id = add_menu_item(menu_item_title, menu_item_handler_wrapper, p_handler, menu_item_handler_ddest);
+  
+  ret_val = PyLong_FromLong((long)item_id);
+  PyGILState_Release(gil_state);
+  return ret_val;
+}
+
 /* Registering functions as a module in Python interpreter: */
 
 static PyMethodDef python_methods[] =
@@ -796,6 +853,12 @@ static PyMethodDef python_methods[] =
     .ml_meth = python_remove_command_handler,
     .ml_flags = METH_VARARGS,
     .ml_doc = "Remove XPLM Command handler, previously added, by its reference ID."
+  },
+  {
+    .ml_name = "add_menu_item",
+    .ml_meth = python_add_menu_item,
+    .ml_flags = METH_VARARGS,
+    .ml_doc = "Add new menu item to this plugin's menu and returns its identifier."
   },
   {
     .ml_name = NULL,

@@ -13,7 +13,7 @@
 #include "commandref.h"
 #include "loop.h"
 
-static void menu_hdl_about(int menuItemId);
+static void menu_hdl_about(int menuItemId, void *data); // RbxMenuItemHandler
 
 PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 {
@@ -48,13 +48,13 @@ PLUGIN_API void XPluginDisable(void)
 PLUGIN_API void XPluginStop(void)
 {
   destroy_loop();
-  destroy_python();
   destroy_menu();
+  destroy_python();
   destroy_commandref();
   destroy_dataref();
 }
 
-static void menu_hdl_about(int menuItemId)
+static void menu_hdl_about(int menuItemId, void *data)
 {
   fprintf(stdout, "Raberix 2020\n");
 }
