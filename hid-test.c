@@ -22,7 +22,7 @@ int test_retrieve_hid_device_list(void)
 
   LINKED_LIST_FOREACH(HidDevice,hid_devices,element)
   {
-    printf("Found Raw HID device file: '%s'.", element->file_name);
+    printf("Found Raw HID device '%s' from file: %s.\n", element->name, element->file_name);
   }
 
   delete_hid_device_list(&LINKED_LIST(hid_devices));

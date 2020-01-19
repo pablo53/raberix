@@ -4,9 +4,10 @@
 #include <stddef.h>
 
 #include "structure.h"
+#include "def.h"
 
-int create_hid(void);
-void destroy_hid(void);
+EXPORT_SYMBOL int create_hid(void);
+EXPORT_SYMBOL void destroy_hid(void);
 
 typedef struct
 {
@@ -24,9 +25,9 @@ typedef struct
 
 DECLARE_LINKED_LIST_TYPE(RbxHidDevice*,HidDevice);
 
-LINKED_LIST_TYPE(HidDevice) get_hid_device_list(void); // the caller is the owner of the returning (null-terminated) list and must destroy it with destroy_hid_device_list()
-void delete_hid_device_list(LINKED_LIST_TYPE(HidDevice) *devices_ref);
-RbxHidReport* get_hid_report_desc(RbxHidDevice* device); // the caller is the owner and must destroy it with delete_hid_report_desc()
-void delete_hid_report_desc(RbxHidReport* report_desc);
+EXPORT_SYMBOL LINKED_LIST_TYPE(HidDevice) get_hid_device_list(void); // the caller is the owner of the returning (null-terminated) list and must destroy it with destroy_hid_device_list()
+EXPORT_SYMBOL void delete_hid_device_list(LINKED_LIST_TYPE(HidDevice) *devices_ref);
+EXPORT_SYMBOL RbxHidReport* get_hid_report_desc(RbxHidDevice* device); // the caller is the owner and must destroy it with delete_hid_report_desc()
+EXPORT_SYMBOL void delete_hid_report_desc(RbxHidReport* report_desc);
 
 #endif

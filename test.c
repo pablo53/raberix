@@ -5,8 +5,8 @@
 int call_test(TestFunc func, const char * desc)
 {
   int res;
-  fprintf(stdout, " *** Testing %s... ", desc);
+  fprintf(stdout, " >>> Testing '%s':\n", desc);
   res = func();
-  fprintf(stdout, res ? "failed.\n" : "done.\n");
+  fprintf(stdout, " <<< '%s' %s", desc, res ? "failed.\n" : "done.\n");
   return res;
 }

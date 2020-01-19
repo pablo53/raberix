@@ -1,5 +1,3 @@
-#include "main.h"
-
 #include "XPLM/XPLMDefs.h"
 
 #include <stddef.h>
