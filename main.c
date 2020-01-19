@@ -12,6 +12,7 @@
 #include "dataref.h"
 #include "commandref.h"
 #include "loop.h"
+#include "hid.h"
 
 static void menu_hdl_about(int menuItemId, void *data); // RbxMenuItemHandler
 
@@ -25,6 +26,7 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 
   test = test && create_dataref();
   test = test && create_commandref();
+  test = test && create_hid();
   test = test && create_menu("About", (RbxMenuItemHandler)menu_hdl_about, NULL);
   test = test && create_python();
   test = test && create_loop();
@@ -50,6 +52,7 @@ PLUGIN_API void XPluginStop(void)
   destroy_loop();
   destroy_menu();
   destroy_python();
+  destroy_hid();
   destroy_commandref();
   destroy_dataref();
 }

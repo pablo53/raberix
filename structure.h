@@ -68,4 +68,71 @@ static int insert_ ## name ## _into_tab(elemtype name) \
 
 #define SYNC_LIST(name) name ## s
 
+/* Lists: */
+
+#define DECLARE_LINKED_LIST_TYPE(elemtype,typename) \
+  \
+  typedef void (*ListElementDestructor ## typename)(elemtype element); \
+  \
+  typedef struct ListElementContainer ## typename ListElementContainer ## typename; \
+  \
+  struct ListElementContainer ## typename { \
+    elemtype element; \
+    ListElementContainer ## typename *next; \
+    ListElementDestructor ## typename ddest; \
+  }; \
+
+#define DECLARE_LINKED_LIST_OPERATIONS(elemtype,typename) \
+  int add_element_to_linked_list_ ## typename(elemtype new_element, ListElementContainer ## typename **head_ref) \
+  { \
+    ListElementContainer ## typename *tail = *head_ref; \
+    if (!(*head_ref)) \
+      *head_ref = tail = malloc(sizeof(ListElementContainer ## typename)); \
+    else \
+    { \
+      while (tail->next) \
+        tail = tail->next; \
+      tail->next = malloc(sizeof(ListElementContainer ## typename)); \
+      tail = tail->next; \
+    } \
+    if (!tail) \
+    { \
+      fprintf(stderr, "Could not allocate memory for a list element!\n"); \
+      return -1; \
+    } \
+    tail->next = NULL; \
+    tail->element = new_element; \
+    return 0; \
+  } \
+  \
+  void destroy_linked_list ## typename(ListElementContainer ## typename **head_ref) \
+  { \
+    ListElementContainer ## typename *curr; \
+    while ((curr = *head_ref)) \
+    { \
+      if ((*head_ref)->ddest) \
+        ((*head_ref)->ddest)((*head_ref)->element); \
+      (*head_ref) = (*head_ref)->next; \
+      free(curr); \
+    } \
+  } \
+
+#define LINKED_LIST_TYPE(typename) ListElementContainer ## typename *
+
+#define LINKED_LIST(name) head ## name
+
+#define DECLARE_LINKED_LIST(typename,name) \
+  LINKED_LIST_TYPE(typename) LINKED_LIST(name) = NULL; \
+
+#define LINKED_LIST_ADD(typename,name,element) \
+  add_element_to_linked_list_ ## typename((element), &LINKED_LIST(name)); \
+
+#define LINKED_LIST_DESTROY(typename,name) \
+  destroy_linked_list ## typename(&LINKED_LIST(name)); \
+
+#define LINKED_LIST_FOREACH(typename,name,element) \
+  for (ListElementContainer ## typename container = LINKED_LIST(name), if (container) element = LINKED_LIST(name)->element; \
+       container; \
+       container = container->next, if (container) element = container->element) \
+
 #endif
