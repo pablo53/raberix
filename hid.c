@@ -10,7 +10,7 @@
 
 #include "structure.h"
 
-DECLARE_LINKED_LIST_OPERATIONS(RbxHidDevice*,HidDevice);
+DECLARE_LINKED_LIST_OPERATIONS(HidDevice);
 
 int create_hid(void)
 {
@@ -31,12 +31,12 @@ LINKED_LIST_TYPE(HidDevice) get_hid_device_list(void)
 {
   DIR *dev_dir = opendir("/dev");
   struct dirent *dent;
-  DECLARE_LINKED_LIST(HidDevice,devices);
+  DECLARE_LINKED_LIST(HidDevice,devices) = NULL;
   RbxHidDevice *device;
 
   while ((dent = readdir(dev_dir)))
   {
-    if (strncmp(dent->d_name, "rawhid", 6))
+    if (strncmp(dent->d_name, "hidraw", 6))
       continue;
     device = malloc(sizeof(RbxHidDevice));
     if (!device)
@@ -45,6 +45,7 @@ LINKED_LIST_TYPE(HidDevice) get_hid_device_list(void)
       return LINKED_LIST(devices);
     }
     device->name = "";
+    device->file_name = strdup(dent->d_name);
     device->device_id = 0x0000;
     device->vendor_id = 0x0000;
     LINKED_LIST_ADD(HidDevice,devices,device)

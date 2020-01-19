@@ -70,20 +70,24 @@ static int insert_ ## name ## _into_tab(elemtype name) \
 
 /* Lists: */
 
+#define LINKED_LIST_ELEM_TYPE(typename) LinkedListElemType ## typename
+
 #define DECLARE_LINKED_LIST_TYPE(elemtype,typename) \
   \
-  typedef void (*ListElementDestructor ## typename)(elemtype element); \
+  typedef elemtype LINKED_LIST_ELEM_TYPE(typename); \
+  \
+  typedef void (*ListElementDestructor ## typename)(LINKED_LIST_ELEM_TYPE(typename) element); \
   \
   typedef struct ListElementContainer ## typename ListElementContainer ## typename; \
   \
   struct ListElementContainer ## typename { \
-    elemtype element; \
+    LINKED_LIST_ELEM_TYPE(typename) element; \
     ListElementContainer ## typename *next; \
     ListElementDestructor ## typename ddest; \
   }; \
 
-#define DECLARE_LINKED_LIST_OPERATIONS(elemtype,typename) \
-  int add_element_to_linked_list_ ## typename(elemtype new_element, ListElementContainer ## typename **head_ref) \
+#define DECLARE_LINKED_LIST_OPERATIONS(typename) \
+  int add_element_to_linked_list_ ## typename(LINKED_LIST_ELEM_TYPE(typename) new_element, ListElementContainer ## typename **head_ref) \
   { \
     ListElementContainer ## typename *tail = *head_ref; \
     if (!(*head_ref)) \
@@ -122,7 +126,7 @@ static int insert_ ## name ## _into_tab(elemtype name) \
 #define LINKED_LIST(name) head ## name
 
 #define DECLARE_LINKED_LIST(typename,name) \
-  LINKED_LIST_TYPE(typename) LINKED_LIST(name) = NULL; \
+  LINKED_LIST_TYPE(typename) LINKED_LIST(name) \
 
 #define LINKED_LIST_ADD(typename,name,element) \
   add_element_to_linked_list_ ## typename((element), &LINKED_LIST(name)); \
@@ -130,9 +134,13 @@ static int insert_ ## name ## _into_tab(elemtype name) \
 #define LINKED_LIST_DESTROY(typename,name) \
   destroy_linked_list ## typename(&LINKED_LIST(name)); \
 
+#define DECLARE_LINKED_LIST_LOOP(typename) \
+  LINKED_LIST_TYPE(typename) container = NULL; \
+  LINKED_LIST_ELEM_TYPE(typename) element = NULL; \
+
 #define LINKED_LIST_FOREACH(typename,name,element) \
-  for (ListElementContainer ## typename container = LINKED_LIST(name), if (container) element = LINKED_LIST(name)->element; \
+  for (container = LINKED_LIST(name), element = (container ? container->element : element); \
        container; \
-       container = container->next, if (container) element = container->element) \
+       container = container->next, element = (container ? container->element : element)) \
 
 #endif
